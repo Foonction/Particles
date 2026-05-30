@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Phfyzics/Phfyzics.vcxproj" Id="5e02a6ca-1fa5-4705-ad2b-0fa3a7b533ca" />
+</Solution>
