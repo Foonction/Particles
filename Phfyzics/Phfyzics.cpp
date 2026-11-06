@@ -8,19 +8,26 @@
 #include <cstdlib> 
 #include "curses.h"
 
+#define _HAS_STD_BYTE 0
 using namespace std;
 
+#ifdef _WIN32
+    #include <Windows.h>
+#endif 
+
+
 // Глобальные динамические размеры симуляции частиц
-int width = 1600;         // Текущая рабочая ширина (пересчитывается в цикле)
-int height = 672;        // Текущая рабочая высота (пересчитывается в цикле)
+int width_disp = 0, height_disp = 0;
+int width = 110;         // Текущая рабочая ширина (пересчитывается в цикле)
+int height = 46;        // Текущая рабочая высота (пересчитывается в цикле)
 int count_all = 50;     // Стартовое количество физических объектов
 int delay = 33;         // Задержка кадра для анимации (~30 FPS)
 
 // Описание свойств отдельной частицы
 struct Particle
 {
-    float x, y;               // Положение центра частицы на экране
-    float vector_x, vector_y; // Проекции скорости на оси X и Y
+    double x, y;               // Положение центра частицы на экране
+    double vector_x, vector_y; // Проекции скорости на оси X и Y
     float weight;             // Масса, определяющая геометрию и физику удара
     float temperature;        // Нагрев, управляющий сменой цветов палитры
 };
@@ -30,13 +37,13 @@ void CustomSettings(int argc, char* argv[])
 {
     if (argc >= 5)
     {
-        if (atoi(argv[1]) > 110 || atoi(argv[1]) < 60) width = 60;
+        if (atoi(argv[1]) > 110 || atoi(argv[1]) < 50) width = 50;
         else width = atoi(argv[1]);
 
-        if (atoi(argv[2]) > 46 || atoi(argv[2]) < 25) height = 25;
+        if (atoi(argv[2]) > 46 || atoi(argv[2]) < 20) height = 20;
         else height = atoi(argv[2]);
 
-        if (atoi(argv[3]) > 100) count_all = 50;
+        if (atoi(argv[3]) > 100 || atoi(argv[3]) < 1) count_all = 50;
         else count_all = atoi(argv[3]);
 
         if (atoi(argv[4]) < 0) delay = 33;
@@ -153,7 +160,6 @@ void UpdatePhysicsAndDraw(vector<Particle>& particles, int count_all)
 
         attron(COLOR_PAIR(color_index));
 
-        // Выбираем символ: ACS_BULLET (точка) или ACS_BLOCK (квадрат)
         const char* particle_char = "o";
 
         if (particles[i].weight == 9.0f)
@@ -189,10 +195,6 @@ void UpdatePhysicsAndDraw(vector<Particle>& particles, int count_all)
 
 int main(int argc, char* argv[])
 {
-#ifdef _WIN32
-    setlocale(LC_ALL, ".UTF-8");
-    SetConsoleOutputCP(CP_UTF8);
-#endif
     setlocale(LC_ALL, "");
     CustomSettings(argc, argv);
 
@@ -201,6 +203,8 @@ int main(int argc, char* argv[])
     curs_set(0);
     start_color();
 #ifdef _WIN32
+    setlocale(LC_ALL, ".UTF-8");
+    SetConsoleOutputCP(CP_UTF8);
     init_pair(1, COLOR_WHITE, COLOR_BLACK);
     init_pair(2, COLOR_RED, COLOR_BLACK);
 #else
@@ -227,24 +231,27 @@ int main(int argc, char* argv[])
         if (abs(vy) < 0.05f) vy = 0.20f;
 
         // Изначально спавним в безопасной центральной зоне, чтобы они не застряли при изменении окна
-        particles.push_back({ (float)(rand() % 100 + 0), (float)(rand() % 100 + 0), vx, vy, current_weight, 20.0f });
+        particles.push_back({ (float)(rand() % (width - 2) + 1), (float)(rand() % (height - 3) + 1), vx, vy, current_weight, 20.0f });
     }
 
+    keypad(stdscr, TRUE);
+    nodelay(stdscr, TRUE); // Переводим getch в неблокирующий режим (чтобы цикл не застывал)
+
+    noecho();
     while (true)
     {
-        // 1. Спрашиваем у Windows новые размеры развернутого окна
-        resize_term(0, 0);
-
-        // 2. Принудительно пересчитываем width и height под размер экрана (минус отступы для рамок и инфо-панели)
-        width = COLS - 2;
-        height = LINES - 4;
-
-        // Ограничиваем минимальный размер, чтобы физика не схлопнулась при случайном сжатии
-        if (width < 20) width = 20;
-        if (height < 10) height = 10;
-
-        // Очистка буфера экрана
+        int curr_width, curr_height;
+        getmaxyx(stdscr, curr_height, curr_width);
+        if (is_termresized() || width_disp != curr_width || height_disp != curr_height)
+        { 
+            resize_term(0,0);
+            redrawwin(stdscr);
+            clear();
+            width_disp = curr_width;
+            height_disp = curr_height;
+        }
         erase();
+        
 
         // Вывод динамической рамки поля, которая подстраивается под экран
         for (int x = 0; x < width + 2; x++) {
@@ -262,6 +269,6 @@ int main(int argc, char* argv[])
         mvprintw(height + 2, 0, "particles: %d | average speed: %f units/frame", count_all, avg_speed);
         refresh();
         std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-
+        
     }
 }
