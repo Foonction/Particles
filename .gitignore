@@ -1,7 +1,5 @@
-Debug/
-Release/
-x64/
-*.ipch
-*.db
-*.sdf
-.vs/
+/.vs
+/out
+/build
+/vcpkg_installed
+CMakeSettings.json

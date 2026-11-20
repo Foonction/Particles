@@ -1,0 +1,14 @@
+{
+    "name": "particle",
+    "dependencies": [
+        {
+            "name" : "pdcurses",
+            "platform" : "windows"
+        },
+        
+        {
+            "name" : "ncurses",
+            "platform" : "!windows"
+        }
+    ]
+}
