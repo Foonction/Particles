@@ -17,8 +17,6 @@
     #include "ncurses.h"
 #endif 
 
-#define _HAS_STD_BYTE 0
-
 using namespace std;
 
 
